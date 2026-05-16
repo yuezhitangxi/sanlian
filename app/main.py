@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -24,6 +25,13 @@ from .services import (
 
 
 app = FastAPI(title="Three Chain Simulation Demo API", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 engine = get_engine()
 FRONTEND_PATH = Path(__file__).resolve().parents[1] / "frontend.html"
 

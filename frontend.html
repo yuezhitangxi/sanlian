@@ -359,6 +359,86 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
+    .home-shell {
+      min-height: calc(100vh - 122px);
+      display: grid;
+      align-items: start;
+    }
+
+    .home-flow {
+      display: grid;
+      gap: 14px;
+      max-width: 980px;
+    }
+
+    .flow-card {
+      position: relative;
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(20, 25, 32, 0.96), rgba(13, 18, 24, 0.92));
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18);
+    }
+
+    .flow-index {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius);
+      border: 1px solid rgba(64, 209, 200, 0.35);
+      background: rgba(64, 209, 200, 0.1);
+      color: var(--teal);
+      font-weight: 800;
+    }
+
+    .flow-content {
+      min-width: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .flow-title {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .flow-title span {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .flow-main {
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.65;
+    }
+
+    .flow-link {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .flow-arrow {
+      width: 44px;
+      display: grid;
+      place-items: center;
+      color: var(--teal);
+      font-size: 22px;
+      line-height: 1;
+    }
+
     .card,
     .panel,
     .metric-card {
@@ -565,6 +645,31 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
+    }
+
+    .run-overview .kv {
+      min-width: 0;
+    }
+
+    .run-overview .kv strong {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      white-space: normal;
+    }
+
+    .run-overview .kv.path-row {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 86px minmax(0, 1fr);
+      align-items: start;
+    }
+
+    .run-overview .kv.path-row strong {
+      text-align: left;
+      font-family: Consolas, "SFMono-Regular", "Liberation Mono", monospace;
+      font-size: 12px;
+      line-height: 1.55;
     }
 
     .validation-list {
@@ -1203,7 +1308,8 @@
       </div>
       <nav class="nav" aria-label="主导航">
         <div class="nav-label">Workspace</div>
-        <button class="nav-item active" data-page="ontology"><span class="nav-icon">O</span><span>本体管理</span></button>
+        <button class="nav-item active" data-page="home"><span class="nav-icon">H</span><span>首页</span></button>
+        <button class="nav-item" data-page="ontology"><span class="nav-icon">O</span><span>本体管理</span></button>
         <button class="nav-item" data-page="simulation"><span class="nav-icon">S</span><span>业务仿真</span></button>
         <div class="sim-nav" id="simNav" aria-label="业务仿真子页面">
           <button class="sim-nav-item active" data-sim-page="scenario">场景参数配置</button>
@@ -1221,8 +1327,8 @@
     <main class="main">
       <header class="topbar">
         <div class="page-title">
-          <strong id="pageTitle">本体管理</strong>
-          <span id="pageSubtitle">三链协同本体类、属性与关系</span>
+          <strong id="pageTitle">首页</strong>
+          <span id="pageSubtitle">三链协同流程总览</span>
         </div>
         <div class="toolbar">
           <span class="status-pill"><i class="dot" id="healthDot"></i><span id="healthText">检查中</span></span>
@@ -1233,7 +1339,60 @@
       </header>
 
       <section class="content">
-        <section class="page active" id="ontology">
+        <section class="page active" id="home">
+          <div class="home-shell">
+            <div class="home-flow">
+              <div class="section-head">
+                <div>
+                  <h1>首页</h1>
+                  <p>从需求链、制造链、供应链进入优化求解，形成一条可追溯的三链协同流程。</p>
+                </div>
+              </div>
+
+              <div class="flow-card">
+                <div class="flow-index">01</div>
+                <div class="flow-content">
+                  <div class="flow-title">需求链 <span>Demand Chain</span></div>
+                  <div class="flow-main">预测需求 / 客户节点 / 交付日期 / 优先级</div>
+                  <div class="flow-link">通过 Vehicle、BOM、Take Rate 关联</div>
+                </div>
+              </div>
+
+              <div class="flow-arrow">↓</div>
+
+              <div class="flow-card">
+                <div class="flow-index">02</div>
+                <div class="flow-content">
+                  <div class="flow-title">制造链 <span>Manufacturing Chain</span></div>
+                  <div class="flow-main">车型 / 模块 / BOM / 产线 / 工厂 / 产能</div>
+                  <div class="flow-link">通过供应节点、运输弧、提前期关联</div>
+                </div>
+              </div>
+
+              <div class="flow-arrow">↓</div>
+
+              <div class="flow-card">
+                <div class="flow-index">03</div>
+                <div class="flow-content">
+                  <div class="flow-title">供应链 <span>Supply Chain</span></div>
+                  <div class="flow-main">供应商 / 采购能力 / 运输路径 / 库存 / 到货</div>
+                </div>
+              </div>
+
+              <div class="flow-arrow">↓</div>
+
+              <div class="flow-card">
+                <div class="flow-index">04</div>
+                <div class="flow-content">
+                  <div class="flow-title">优化求解 <span>Solver</span></div>
+                  <div class="flow-main">需求满足最大化 → 服务收益最大化 → 成本最小化</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="ontology">
           <div class="ontology-layout">
             <aside class="panel">
               <div class="panel-head"><strong>本体域筛选器</strong><span class="tag">Domain</span></div>
@@ -1410,8 +1569,8 @@
                 <div class="run-overview">
                   <div class="kv"><span>当前批次</span><strong id="currentRunId">未选择</strong></div>
                   <div class="kv"><span>生成表数</span><strong id="currentTableCount">0</strong></div>
-                  <div class="kv"><span>输出位置</span><strong id="currentOutputDir">-</strong></div>
                   <div class="kv"><span>数据库策略</span><strong>按 run_id 追加</strong></div>
+                  <div class="kv path-row"><span>输出位置</span><strong id="currentOutputDir">-</strong></div>
                 </div>
               </div>
               <div class="card">
@@ -1510,6 +1669,7 @@
     };
 
     const pageInfo = {
+      home: ["首页", "三链协同流程总览"],
       ontology: ["本体管理", "三链协同本体类、属性与关系"],
       simulation: ["业务场景配置与数据仿真", "点击左侧子页面切换模块二流程"]
     };
@@ -1785,7 +1945,7 @@
           renderNoRunState();
         }
       } catch (error) {
-        setHealth(false, healthOk ? "数据库异常" : "连接失败");
+        setHealth(false, healthOk ? "数据库异常" : "后端未连接");
         state.activeRunId = "";
         renderRuns();
         renderRunSelect();
@@ -1908,7 +2068,7 @@
       const max = Math.max(...rows.map(row => row.value), 1);
       $("#summaryBars").innerHTML = rows.map(row => `
         <div class="bar-row">
-          <span>${label}</span>
+          <span>${row.label}</span>
           <div class="bar-track"><div class="bar-fill" style="width:${Math.max(3, row.value / max * 100)}%"></div></div>
           <strong>${formatNumber(row.value)}</strong>
         </div>
