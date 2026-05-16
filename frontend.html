@@ -1,0 +1,2295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>蔚来三链协同数据治理平台</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0b0f14;
+      --panel: rgba(20, 25, 32, 0.92);
+      --panel-strong: #151b24;
+      --surface: #1c2430;
+      --surface-soft: rgba(255, 255, 255, 0.045);
+      --border: rgba(147, 162, 183, 0.22);
+      --border-strong: rgba(108, 191, 255, 0.42);
+      --text: #f2f7fb;
+      --muted: #9ba8b8;
+      --faint: #6f7d8e;
+      --blue: #5aa9ff;
+      --teal: #40d1c8;
+      --green: #42c777;
+      --amber: #e9b949;
+      --red: #ff6b6b;
+      --violet: #b58cff;
+      --shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
+      --radius: 8px;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 18% 8%, rgba(64, 209, 200, 0.14), transparent 28%),
+        radial-gradient(circle at 86% 14%, rgba(233, 185, 73, 0.09), transparent 24%),
+        linear-gradient(135deg, #0b0f14 0%, #101720 48%, #0e1116 100%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(90, 169, 255, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(90, 169, 255, 0.045) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.25) 80%);
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: rgba(15, 19, 25, 0.95);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      height: 74px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, var(--teal), var(--blue));
+      color: #fff;
+      font-weight: 800;
+      box-shadow: 0 0 26px rgba(64, 209, 200, 0.22);
+    }
+
+    .brand-title {
+      display: grid;
+      gap: 3px;
+    }
+
+    .brand-title strong {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .brand-title span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .nav {
+      flex: 1;
+      padding: 14px 10px;
+    }
+
+    .nav-label {
+      padding: 10px 10px 9px;
+      color: var(--faint);
+      font-size: 11px;
+    }
+
+    .nav-item {
+      width: 100%;
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 11px;
+      margin-bottom: 6px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--muted);
+      text-align: left;
+      transition: 0.18s ease;
+    }
+
+    .nav-item:hover,
+    .nav-item.active {
+      color: var(--text);
+      border-color: rgba(90, 169, 255, 0.3);
+      background: rgba(90, 169, 255, 0.1);
+    }
+
+    .nav-icon {
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      background: var(--surface);
+      color: var(--teal);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .sidebar-foot {
+      padding: 14px 16px 18px;
+      border-top: 1px solid var(--border);
+      color: var(--faint);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .main {
+      min-width: 0;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      min-height: 70px;
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) minmax(420px, auto);
+      gap: 16px;
+      align-items: center;
+      padding: 12px 22px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(11, 15, 20, 0.86);
+      backdrop-filter: blur(18px);
+    }
+
+    .page-title {
+      display: grid;
+      gap: 4px;
+    }
+
+    .page-title strong {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .page-title span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .field,
+    .select {
+      min-height: 36px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #0f141b;
+      color: var(--text);
+      outline: none;
+    }
+
+    .field {
+      width: 230px;
+      padding: 0 10px;
+    }
+
+    .select {
+      max-width: 260px;
+      padding: 0 10px;
+    }
+
+    .field:focus,
+    .select:focus {
+      border-color: var(--border-strong);
+      box-shadow: 0 0 0 3px rgba(90, 169, 255, 0.12);
+    }
+
+    .btn {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      transition: 0.18s ease;
+    }
+
+    .btn:hover {
+      border-color: var(--border-strong);
+      box-shadow: 0 0 18px rgba(90, 169, 255, 0.16);
+    }
+
+    .btn.primary {
+      border-color: rgba(64, 209, 200, 0.5);
+      background: linear-gradient(135deg, #188c8a, #2478d4);
+    }
+
+    .btn.warn {
+      border-color: rgba(233, 185, 73, 0.45);
+      color: #ffe7a3;
+      background: rgba(233, 185, 73, 0.12);
+    }
+
+    .status-pill {
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px;
+      border: 1px solid rgba(64, 209, 200, 0.28);
+      border-radius: 999px;
+      background: rgba(64, 209, 200, 0.08);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 12px rgba(66, 199, 119, 0.8);
+    }
+
+    .dot.off {
+      background: var(--red);
+      box-shadow: 0 0 12px rgba(255, 107, 107, 0.7);
+    }
+
+    .content {
+      padding: 22px;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+      animation: fade 0.18s ease;
+    }
+
+    @keyframes fade {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .section-head h1,
+    .section-head h2 {
+      margin-bottom: 6px;
+      font-size: 20px;
+      line-height: 1.25;
+    }
+
+    .section-head p {
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .metrics {
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+    }
+
+    .two-col {
+      grid-template-columns: minmax(0, 1.15fr) minmax(330px, 0.85fr);
+      align-items: start;
+    }
+
+    .three-col {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card,
+    .panel,
+    .metric-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 14px 38px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(16px);
+    }
+
+    .card {
+      padding: 16px;
+    }
+
+    .metric-card {
+      min-height: 112px;
+      padding: 15px;
+      display: grid;
+      align-content: space-between;
+      gap: 16px;
+    }
+
+    .metric-card span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .metric-card strong {
+      color: var(--teal);
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .metric-card small {
+      color: var(--faint);
+      font-size: 11px;
+    }
+
+    .card-head,
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 13px;
+    }
+
+    .panel-head {
+      min-height: 50px;
+      margin-bottom: 0;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-head h3,
+    .panel-head h3,
+    .panel-head strong {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .card-head span,
+    .panel-head span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .run-form {
+      display: grid;
+      grid-template-columns: minmax(160px, 1fr) 120px auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .scenario-form .run-form {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .sim-nav {
+      display: none;
+      gap: 6px;
+      margin: 0 0 6px 32px;
+    }
+
+    .nav.sim-open .sim-nav {
+      display: grid;
+    }
+
+    .sim-nav-item {
+      width: 100%;
+      min-height: 34px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.035);
+      color: var(--muted);
+      text-align: left;
+      white-space: nowrap;
+      transition: 0.18s ease;
+    }
+
+    .sim-nav-item:hover,
+    .sim-nav-item.active {
+      color: var(--text);
+      border-color: rgba(64, 209, 200, 0.45);
+      background: rgba(64, 209, 200, 0.11);
+    }
+
+    .sim-subpage {
+      display: none;
+    }
+
+    .sim-subpage.active {
+      display: block;
+      animation: fade 0.18s ease;
+    }
+
+    .scenario-form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .form-field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .form-field label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .form-field .field,
+    .form-field .select {
+      width: 100%;
+      max-width: none;
+    }
+
+    .param-group {
+      display: grid;
+      gap: 8px;
+      padding: 11px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .param-group strong {
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .param-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .storage-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .option-pill {
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.035);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .option-pill.active {
+      border-color: rgba(64, 209, 200, 0.5);
+      background: rgba(64, 209, 200, 0.12);
+      color: var(--text);
+    }
+
+    .option-pill.disabled {
+      opacity: 0.46;
+    }
+
+    .run-overview {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .validation-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .check-row {
+      min-height: 42px;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(13, 18, 24, 0.52);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .check-row i {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 12px rgba(255, 107, 107, 0.45);
+    }
+
+    .check-row.pass i {
+      background: var(--green);
+      box-shadow: 0 0 12px rgba(66, 199, 119, 0.55);
+    }
+
+    .mapping-table {
+      max-height: 360px;
+    }
+
+    .run-list,
+    .class-list,
+    .table-list {
+      display: grid;
+      gap: 8px;
+      max-height: 360px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .list-btn {
+      width: 100%;
+      min-height: 44px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.035);
+      color: var(--text);
+      text-align: left;
+      transition: 0.18s ease;
+    }
+
+    .list-btn:hover,
+    .list-btn.active {
+      border-color: var(--border-strong);
+      background: rgba(90, 169, 255, 0.1);
+    }
+
+    .list-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.56;
+    }
+
+    .list-btn strong {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .list-btn small {
+      display: block;
+      margin-top: 3px;
+      color: var(--faint);
+      font-size: 11px;
+    }
+
+    .badge {
+      min-height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(90, 169, 255, 0.24);
+      background: rgba(90, 169, 255, 0.09);
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .badge.green {
+      border-color: rgba(66, 199, 119, 0.32);
+      background: rgba(66, 199, 119, 0.1);
+      color: #a8efc4;
+    }
+
+    .badge.red {
+      border-color: rgba(255, 107, 107, 0.32);
+      background: rgba(255, 107, 107, 0.1);
+      color: #ffc1c1;
+    }
+
+    .chart {
+      display: grid;
+      gap: 10px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 128px minmax(0, 1fr) 86px;
+      gap: 10px;
+      align-items: center;
+      min-height: 30px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .bar-track {
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.07);
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--teal), var(--blue));
+      transition: width 0.35s ease;
+    }
+
+    .risk-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .risk-tile {
+      min-height: 112px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .risk-tile strong {
+      display: block;
+      margin: 10px 0 6px;
+      color: var(--amber);
+      font-size: 24px;
+    }
+
+    .risk-tile span,
+    .risk-tile small {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .table-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .table-wrap {
+      width: 100%;
+      max-height: 520px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #0d1218;
+    }
+
+    table {
+      width: 100%;
+      min-width: 780px;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th,
+    td {
+      padding: 10px 11px;
+      border-bottom: 1px solid rgba(147, 162, 183, 0.16);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #131a23;
+      color: #b4c1d3;
+      font-weight: 700;
+    }
+
+    td {
+      color: #e7eef6;
+    }
+
+    .pager {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .ontology-layout {
+      height: calc(100vh - 122px);
+      min-height: 660px;
+      display: grid;
+      grid-template-columns: 238px minmax(520px, 1fr) 320px;
+      gap: 14px;
+    }
+
+    .panel {
+      overflow: hidden;
+    }
+
+    .panel-body {
+      padding: 14px;
+    }
+
+    .domain-list {
+      padding: 12px;
+    }
+
+    .domain-btn {
+      width: 100%;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 0 10px;
+      margin-bottom: 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(13, 18, 24, 0.58);
+      color: var(--muted);
+      cursor: pointer;
+      text-align: left;
+      transition: 0.18s ease;
+    }
+
+    .domain-btn:hover,
+    .domain-btn.active {
+      color: var(--text);
+      border-color: var(--domain-color, var(--blue));
+      background: color-mix(in srgb, var(--domain-color, var(--blue)) 15%, transparent);
+      box-shadow: 0 0 20px color-mix(in srgb, var(--domain-color, var(--blue)) 16%, transparent);
+    }
+
+    .domain-btn span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .domain-btn small {
+      color: var(--faint);
+      font-size: 11px;
+    }
+
+    .domain-btn i {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--domain-color, var(--blue));
+      box-shadow: 0 0 14px var(--domain-color, var(--blue));
+    }
+
+    .domain-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tab {
+      min-height: 30px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.035);
+      color: var(--muted);
+    }
+
+    .tab.active {
+      color: var(--text);
+      border-color: rgba(64, 209, 200, 0.45);
+      background: rgba(64, 209, 200, 0.1);
+    }
+
+    .graph-panel {
+      position: relative;
+      min-width: 0;
+    }
+
+    .graph-shell {
+      position: relative;
+      height: calc(100% - 50px);
+      overflow: hidden;
+      background:
+        linear-gradient(rgba(90, 169, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(90, 169, 255, 0.035) 1px, transparent 1px),
+        rgba(13, 18, 24, 0.72);
+      background-size: 34px 34px;
+    }
+
+    .graph-svg,
+    .graph-shell svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .graph-tip {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      color: var(--faint);
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+    .tip-chip {
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(20, 25, 32, 0.84);
+    }
+
+    .node text {
+      pointer-events: none;
+      fill: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      text-anchor: middle;
+    }
+
+    .node circle {
+      stroke: rgba(255, 255, 255, 0.72);
+      stroke-width: 1.2;
+      filter: drop-shadow(0 0 8px rgba(90, 169, 255, 0.35));
+      cursor: grab;
+    }
+
+    .link {
+      stroke: rgba(155, 168, 184, 0.45);
+      stroke-width: 1.25;
+      marker-end: url(#arrow);
+    }
+
+    .link.inherit {
+      stroke-dasharray: 5 4;
+      stroke: rgba(90, 169, 255, 0.58);
+    }
+
+    .link-label {
+      fill: var(--muted);
+      font-size: 10px;
+      paint-order: stroke;
+      stroke: var(--bg);
+      stroke-width: 3px;
+      stroke-linejoin: round;
+    }
+
+    .detail-body {
+      height: calc(100% - 50px);
+      overflow: auto;
+      padding: 14px;
+    }
+
+    .detail-title {
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .detail-title h3 {
+      margin-bottom: 5px;
+      font-size: 20px;
+    }
+
+    .detail-title p,
+    .detail-block p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .detail-block {
+      margin-bottom: 16px;
+    }
+
+    .detail-block h4 {
+      margin-bottom: 8px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .kv-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .kv {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(13, 18, 24, 0.52);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .kv strong {
+      color: var(--text);
+      font-weight: 650;
+      text-align: right;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .tag {
+      min-height: 26px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 9px;
+      border: 1px solid rgba(90, 169, 255, 0.24);
+      border-radius: 999px;
+      background: rgba(90, 169, 255, 0.08);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .mapping-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 10px;
+      max-height: 274px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .mapping-card {
+      padding: 11px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .mapping-card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--teal);
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .mapping-card span,
+    .mapping-card small {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+
+    .record-json {
+      min-height: 190px;
+      max-height: 330px;
+      overflow: auto;
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #090d12;
+      color: #d8ebff;
+      font-family: Consolas, "SFMono-Regular", "Liberation Mono", monospace;
+      font-size: 12px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .empty {
+      min-height: 160px;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.7;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 30;
+      max-width: min(520px, calc(100vw - 36px));
+      display: none;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 107, 107, 0.36);
+      border-radius: var(--radius);
+      background: rgba(32, 17, 19, 0.96);
+      color: #ffd4d4;
+      box-shadow: var(--shadow);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .toast.show {
+      display: block;
+    }
+
+    .loading {
+      opacity: 0.64;
+      pointer-events: none;
+    }
+
+    @media (max-width: 1180px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: relative;
+        height: auto;
+      }
+
+      .nav {
+        display: flex;
+        gap: 8px;
+        overflow: auto;
+        padding: 10px;
+      }
+
+      .nav-label,
+      .sidebar-foot {
+        display: none;
+      }
+
+      .nav-item {
+        min-width: 132px;
+      }
+
+      .topbar,
+      .ontology-layout,
+      .two-col,
+      .scenario-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .content {
+        padding: 14px;
+      }
+
+      .topbar {
+        padding: 12px 14px;
+      }
+
+      .toolbar {
+        justify-content: stretch;
+      }
+
+      .field,
+      .select,
+      .btn {
+        width: 100%;
+      }
+
+      .metrics,
+      .three-col,
+      .risk-strip,
+      .form-grid,
+      .storage-options,
+      .run-overview,
+      .run-form {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">3C</div>
+        <div class="brand-title">
+          <strong>三链协同平台</strong>
+          <span>本体与数据仿真工作台</span>
+        </div>
+      </div>
+      <nav class="nav" aria-label="主导航">
+        <div class="nav-label">Workspace</div>
+        <button class="nav-item active" data-page="ontology"><span class="nav-icon">O</span><span>本体管理</span></button>
+        <button class="nav-item" data-page="simulation"><span class="nav-icon">S</span><span>业务仿真</span></button>
+        <div class="sim-nav" id="simNav" aria-label="业务仿真子页面">
+          <button class="sim-nav-item active" data-sim-page="scenario">场景参数配置</button>
+          <button class="sim-nav-item" data-sim-page="generate">数据生成</button>
+          <button class="sim-nav-item" data-sim-page="overview">生成结果概览</button>
+          <button class="sim-nav-item" data-sim-page="validation">数据校验</button>
+        </div>
+      </nav>
+      <div class="sidebar-foot">
+        <div>当前批次：<span id="sideRun">未选择</span></div>
+        <div>表数量：<span id="sideTables">0</span></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="page-title">
+          <strong id="pageTitle">本体管理</strong>
+          <span id="pageSubtitle">三链协同本体类、属性与关系</span>
+        </div>
+        <div class="toolbar">
+          <span class="status-pill"><i class="dot" id="healthDot"></i><span id="healthText">检查中</span></span>
+          <input class="field" id="apiBase" autocomplete="off" aria-label="API 地址">
+          <select class="select" id="runSelect" aria-label="选择批次"></select>
+          <button class="btn" id="refreshBtn">刷新</button>
+        </div>
+      </header>
+
+      <section class="content">
+        <section class="page active" id="ontology">
+          <div class="ontology-layout">
+            <aside class="panel">
+              <div class="panel-head"><strong>本体域筛选器</strong><span class="tag">Domain</span></div>
+              <div class="domain-list" id="domainList"></div>
+            </aside>
+
+            <section class="panel graph-panel">
+              <div class="panel-head">
+                <strong>三链协同本体知识图谱</strong>
+                <span class="tag" id="graphSummary">完整本体</span>
+              </div>
+              <div class="graph-shell">
+                <svg id="ontologyGraph" class="graph-svg" role="img" aria-label="三链协同本体知识图谱"></svg>
+                <div class="graph-tip">
+                  <span class="tip-chip">拖拽节点</span>
+                  <span class="tip-chip">滚轮缩放</span>
+                  <span class="tip-chip">点击查看类详情</span>
+                </div>
+              </div>
+            </section>
+
+            <aside class="panel">
+              <div class="panel-head"><strong>节点详情</strong><span class="tag">Class</span></div>
+              <div class="detail-body" id="classDetail"></div>
+            </aside>
+          </div>
+        </section>
+
+        <div class="page" id="simulation">
+          <div class="section-head">
+            <div>
+              <h1>业务场景配置与数据仿真</h1>
+              <p>模块二按流程拆成四个子页面，入口在左侧“业务仿真”下展开。</p>
+            </div>
+            <span class="badge green" id="generateState">就绪</span>
+          </div>
+
+          <section class="sim-subpage active" data-sim-panel="scenario">
+            <div class="card">
+              <div class="card-head">
+                <h3>场景参数配置</h3>
+                <span>Scenario Params</span>
+              </div>
+              <div class="scenario-form">
+                <div class="form-grid">
+                  <div class="form-field">
+                    <label for="scenarioName">场景名称</label>
+                    <select class="select" id="scenarioName">
+                      <option value="基础场景">基础场景</option>
+                      <option value="需求高峰场景">需求高峰场景</option>
+                      <option value="供应受限场景">供应受限场景</option>
+                      <option value="运输延迟场景">运输延迟场景</option>
+                    </select>
+                  </div>
+                  <div class="form-field">
+                    <label for="simulationDate">仿真日期</label>
+                    <input class="field" id="simulationDate" type="date">
+                  </div>
+                  <div class="form-field">
+                    <label for="seed">随机种子</label>
+                    <input class="field" id="seed" placeholder="例如 20260516">
+                  </div>
+                </div>
+                <div class="form-grid">
+                  <div class="form-field">
+                    <label for="vehicleScale">车辆数量</label>
+                    <input class="field" id="vehicleScale" type="number" min="1" value="12">
+                  </div>
+                  <div class="form-field">
+                    <label for="moduleScale">模块数量</label>
+                    <input class="field" id="moduleScale" type="number" min="1" value="36">
+                  </div>
+                  <div class="form-field">
+                    <label for="nodeScale">节点数量</label>
+                    <input class="field" id="nodeScale" type="number" min="1" value="24">
+                  </div>
+                </div>
+                <div class="grid three-col">
+                  <div class="param-group">
+                    <strong>需求侧参数</strong>
+                    <div class="param-tags">
+                      <span class="tag">需求波动：中</span>
+                      <span class="tag">预测周期：周</span>
+                      <span class="tag">订单占比：40%</span>
+                    </div>
+                  </div>
+                  <div class="param-group">
+                    <strong>制造侧参数</strong>
+                    <div class="param-tags">
+                      <span class="tag">BOM复杂度：标准</span>
+                      <span class="tag">产线能力：周粒度</span>
+                      <span class="tag">良率：默认</span>
+                    </div>
+                  </div>
+                  <div class="param-group">
+                    <strong>供应侧参数</strong>
+                    <div class="param-tags">
+                      <span class="tag">供应能力：周粒度</span>
+                      <span class="tag">在途比例：默认</span>
+                      <span class="tag">运输可达：启用</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="sim-subpage" data-sim-panel="generate">
+            <div class="grid two-col">
+              <div class="card">
+                <div class="card-head">
+                  <h3>数据生成</h3>
+                  <span>POST /runs/generate</span>
+                </div>
+                <div class="scenario-form">
+                  <div class="storage-options">
+                    <span class="option-pill active">追加写入并创建 run_id</span>
+                    <span class="option-pill disabled">覆盖写入待后端支持</span>
+                  </div>
+                  <div class="run-form">
+                    <input class="field" id="runName" placeholder="run_name，可为空">
+                    <button class="btn primary" id="generateBtn">生成数据</button>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-head">
+                  <h3>批次列表</h3>
+                  <span id="runCount">0 个批次</span>
+                </div>
+                <div class="run-list" id="runList"></div>
+              </div>
+            </div>
+
+            <div class="grid two-col" style="margin-top: 14px;">
+              <div class="panel">
+                <div class="panel-head">
+                  <h3>生成数据表</h3>
+                  <span id="tableListMeta">等待批次</span>
+                </div>
+                <div class="panel-body">
+                  <input class="field" id="tableSearch" placeholder="搜索表名" style="width: 100%; margin-bottom: 12px;">
+                  <div class="table-list" id="tableList"></div>
+                </div>
+              </div>
+
+              <div class="panel">
+                <div class="panel-head">
+                  <h3 id="tableTitle">表数据</h3>
+                  <span id="tableMeta">未选择表</span>
+                </div>
+                <div class="panel-body">
+                  <div class="table-toolbar">
+                    <span class="badge" id="tablePageBadge">page 1</span>
+                    <div>
+                      <button class="btn" id="prevTablePage">上一页</button>
+                      <button class="btn" id="nextTablePage">下一页</button>
+                    </div>
+                  </div>
+                  <div class="table-wrap" id="tableRows"></div>
+                  <div class="pager" id="tablePager">0 条记录</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="sim-subpage" data-sim-panel="overview">
+            <div class="grid two-col">
+              <div class="card">
+                <div class="card-head">
+                  <h3>生成结果概览</h3>
+                  <span id="summaryMeta">等待数据</span>
+                </div>
+                <div class="run-overview">
+                  <div class="kv"><span>当前批次</span><strong id="currentRunId">未选择</strong></div>
+                  <div class="kv"><span>生成表数</span><strong id="currentTableCount">0</strong></div>
+                  <div class="kv"><span>输出位置</span><strong id="currentOutputDir">-</strong></div>
+                  <div class="kv"><span>数据库策略</span><strong>按 run_id 追加</strong></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-head">
+                  <h3>字段与本体映射</h3>
+                  <span id="mappingMeta">等待映射</span>
+                </div>
+                <div class="table-wrap mapping-table" id="mappingTable"></div>
+              </div>
+            </div>
+            <div class="grid metrics" id="metrics" style="margin-top: 14px;"></div>
+            <div class="card" style="margin-top: 14px;">
+              <div class="card-head">
+                <h3>核心数据规模</h3>
+                <span>GET /runs/{run_id}/summary</span>
+              </div>
+              <div class="chart" id="summaryBars"></div>
+            </div>
+          </section>
+
+          <section class="sim-subpage" data-sim-panel="validation">
+            <div class="grid two-col">
+              <div class="card">
+                <div class="card-head">
+                  <h3>数据一致性校验</h3>
+                  <span id="validationMeta">等待批次</span>
+                </div>
+                <div class="validation-list" id="validationList"></div>
+              </div>
+              <div class="card">
+                <div class="card-head">
+                  <h3>风险快照</h3>
+                  <span>校验辅助</span>
+                </div>
+                <div class="risk-strip">
+                  <div class="risk-tile">
+                    <span>物料供需缺口</span>
+                    <strong id="demandRiskCount">0</strong>
+                    <small id="demandRiskTop">暂无高风险记录</small>
+                  </div>
+                  <div class="risk-tile">
+                    <span>产能缺口</span>
+                    <strong id="capacityRiskCount">0</strong>
+                    <small id="capacityRiskTop">暂无高风险记录</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="grid two-col" style="margin-top: 14px;">
+              <div class="card">
+                <div class="card-head">
+                  <h3>物料供需缺口</h3>
+                  <span id="demandGapMeta">0 条</span>
+                </div>
+                <div class="table-wrap" id="demandGapTable"></div>
+              </div>
+
+              <div class="card">
+                <div class="card-head">
+                  <h3>产能缺口</h3>
+                  <span id="capacityGapMeta">0 条</span>
+                </div>
+                <div class="table-wrap" id="capacityGapTable"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const DEFAULT_API_BASE = location.protocol === "http:" || location.protocol === "https:"
+      ? location.origin
+      : "http://127.0.0.1:8000";
+
+    const state = {
+      apiBase: localStorage.getItem("threeChainApiBase") || DEFAULT_API_BASE,
+      runs: [],
+      activeRunId: "",
+      latestRun: null,
+      summary: null,
+      tables: [],
+      selectedTable: "",
+      tablePage: 1,
+      tableResult: null,
+      ontologyClasses: [],
+      mapping: null,
+      selectedDomain: "全部",
+      selectedClass: "Product",
+      activeSimPage: "scenario",
+      demandGap: [],
+      capacityGap: []
+    };
+
+    const pageInfo = {
+      ontology: ["本体管理", "三链协同本体类、属性与关系"],
+      simulation: ["业务场景配置与数据仿真", "点击左侧子页面切换模块二流程"]
+    };
+
+    const simPageInfo = {
+      scenario: "配置业务场景名称、日期、随机种子和三链侧参数",
+      generate: "调用后端生成仿真数据，并查看本次写入的业务表",
+      overview: "查看 run_id、输出位置、核心规模和字段本体映射",
+      validation: "检查批次、表清单、字段映射、关键规模和缺口结果"
+    };
+
+    const domainColors = {
+      "Product Domain": "#40d1c8",
+      "Network Domain": "#5aa9ff",
+      "Manufacturing Domain": "#e9b949",
+      "Demand Domain": "#b58cff",
+      "Supply Domain": "#42c777",
+      "Planning Domain": "#ff8f70"
+    };
+
+    const ontologyDomainColors = {
+      Product: "#58a6ff",
+      Network: "#39c5cf",
+      Manufacturing: "#a371f7",
+      Demand: "#3fb950",
+      Supply: "#d29922",
+      Planning: "#f85149"
+    };
+
+    const ontologyData = {
+      domains: [
+        { id: "all", name: "全部", en: "All Domains", color: "#8b949e" },
+        { id: "Product", name: "产品域", en: "Product Domain", color: ontologyDomainColors.Product },
+        { id: "Network", name: "网络域", en: "Network Domain", color: ontologyDomainColors.Network },
+        { id: "Manufacturing", name: "制造域", en: "Manufacturing Domain", color: ontologyDomainColors.Manufacturing },
+        { id: "Demand", name: "需求域", en: "Demand Domain", color: ontologyDomainColors.Demand },
+        { id: "Supply", name: "供应域", en: "Supply Domain", color: ontologyDomainColors.Supply },
+        { id: "Planning", name: "计划策略域", en: "Planning Domain", color: ontologyDomainColors.Planning }
+      ],
+      classes: [
+        cls("Product", "产品", "Product", null, ["productId: String，物料编码/主键", "productName: String，物料描述", "unitOfMeasure: String，基础计量单位", "unitCost: Decimal，单位标准成本", "lifeCycleStage: Enum(NPI, Active, EOL)，生命周期阶段"], "产品域根类，用于统一车型、模块、零部件和原材料。"),
+        cls("Vehicle", "整车", "Product", "Product", ["vehicleSeries: String，所属车系"], "面向销售与计划的整车产品实例。"),
+        cls("Module", "核心模块", "Product", "Product", ["moduleType: Enum(BatteryPack, EDrive, Chassis, Other)，模块功能分类"], "承载电池包、电驱、底盘等核心模块。"),
+        cls("Component", "零部件", "Product", "Product", ["继承 Product"], "BOM 中被消耗的零部件对象。"),
+        cls("RawMaterial", "原材料", "Product", "Product", ["继承 Product"], "供应链上游原材料对象。"),
+        cls("ConfigurationOption", "配置选项", "Product", null, ["configId: String", "configName: String", "configCategory: String"], "车辆可选配置，能映射到具体物料。"),
+        cls("AlternateMaterialGroup", "替代料组", "Product", null, ["groupId: String", "groupName: String"], "用于描述可替代物料集合。"),
+        cls("SupplyChainNode", "供应链节点", "Network", null, ["nodeId: String", "nodeName: String", "isInfiniteSupply: Boolean", "organizationUnit: String"], "供应、生产、分拨和交付网络中的通用节点。"),
+        cls("Plant", "工厂", "Network", "SupplyChainNode", ["继承 SupplyChainNode"], "承载产线和制造能力的工厂节点。"),
+        cls("SupplierSite", "供应商节点", "Network", "SupplyChainNode", ["继承 SupplyChainNode"], "供应商侧发货或生产节点。"),
+        cls("DistributionCenter", "区域分拨中心", "Network", "SupplyChainNode", ["继承 SupplyChainNode"], "区域库存分拨与配送节点。"),
+        cls("DeliveryCenter", "交付中心", "Network", "SupplyChainNode", ["继承 SupplyChainNode"], "面向用户交付的终端节点。"),
+        cls("Region", "区域", "Network", null, ["regionCode: String", "regionName: String"], "市场、销售或供应网络中的区域维度。"),
+        cls("TransportationLane", "运输通道", "Network", null, ["transportMode: Enum(Road, Rail, Sea)", "transitTimeDays: Int"], "连接供应链节点的运输路线。"),
+        cls("ProductionLine", "产线", "Manufacturing", null, ["lineId: String", "lineName: String", "resourceType: String"], "制造链中的生产资源。"),
+        cls("ProductionCapability", "生产能力", "Manufacturing", null, ["capacityConsumptionRate: Decimal", "unitsPerHour: Decimal"], "描述产品在产线上的单位产能与消耗率。"),
+        cls("WorkCalendar", "工作日历", "Manufacturing", null, ["calendarId: String", "calendarName: String", "calendarType: Enum(PROD, TRANS, RCV)"], "用于约束生产、运输或收货节奏。"),
+        cls("DailyWorkSchedule", "日度工作排程", "Manufacturing", null, ["date: Date", "effectiveWorkHours: Decimal", "numberOfShifts: Int"], "日粒度可用工时和班次安排。"),
+        cls("BillOfMaterials", "物料清单", "Manufacturing", null, ["bomId: String", "effectiveFrom: Date", "effectiveTo: Date"], "产品到零部件和原材料的制造结构。"),
+        cls("BOMLineItem", "BOM 行项目", "Manufacturing", null, ["quantityPer: Decimal", "effectiveFrom: Date", "effectiveTo: Date"], "BOM 中单个消耗物料行。"),
+        cls("Demand", "需求", "Demand", null, ["demandId: String", "targetDate: Date", "quantity: Decimal"], "需求域根类，承载预测和订单数量。"),
+        cls("DemandForecast", "需求预测", "Demand", "Demand", ["继承 Demand"], "计划侧预测需求。"),
+        cls("CustomerOrder", "客户订单", "Demand", "Demand", ["orderDate: Date", "orderPriority: Int"], "客户侧已确认订单需求。"),
+        cls("TakeRateProfile", "选装率档案", "Demand", null, ["takeRate: Decimal", "effectiveFrom: Date", "effectiveTo: Date"], "车辆配置选装比例。"),
+        cls("DemandPlan", "需求计划", "Demand", null, ["planId: String", "planVersion: String", "planName: String", "effectiveFrom: Date", "effectiveTo: Date"], "S&OP 或滚动计划中的需求计划版本。"),
+        cls("Supply", "供应", "Supply", null, ["supplyId: String", "quantity: Decimal", "availableDate: Date"], "供应域根类，统一库存、采购订单和在途。"),
+        cls("OnHandInventory", "在手库存", "Supply", "Supply", ["inventoryStatus: Enum(Available, QualityCheck, Hold)"], "可用、质检或冻结状态库存。"),
+        cls("PurchaseOrder", "采购订单", "Supply", "Supply", ["poNumber: String"], "供应商采购订单。"),
+        cls("InTransitShipment", "在途发货", "Supply", "Supply", ["asnNumber: String", "shipDate: Date"], "运输中的供应数量。"),
+        cls("Supplier", "供应商", "Supply", null, ["supplierId: String", "supplierName: String", "location: String"], "提供物料或产能的供应商主体。"),
+        cls("SupplierCapacity", "供应商产能", "Supply", null, ["capacityId: String", "capacityType: Enum(Daily, Weekly, Monthly)", "capacityValue: Decimal", "availableCapacity: Decimal", "effectiveDate: Date", "expiryDate: Date"], "供应商对特定产品的可用产能。"),
+        cls("PlanningPolicy", "计划策略", "Planning", null, ["safetyStock: Decimal", "minimumLotSize: Int", "yieldRate: Decimal"], "产品和节点维度的库存、批量与良率策略。"),
+        cls("SourcingPolicy", "寻源策略", "Planning", null, ["sourcingPercentage: Decimal", "effectiveFrom: Date", "effectiveTo: Date"], "运输通道或来源策略比例。")
+      ],
+      relations: [
+        rel("parentProduct", "Product", "Product", "N:1", "产品层级自引用，子产品指向父产品。"),
+        rel("belongsToAlternateGroup", "Product", "AlternateMaterialGroup", "N:M", "物料加入替代料组。"),
+        rel("hasConfigurationOption", "Vehicle", "ConfigurationOption", "1:N", "整车拥有的可选配置项。"),
+        rel("mapsToProduct", "ConfigurationOption", "Product", "N:1", "配置选项映射到具体物料。"),
+        rel("locatedIn", "SupplyChainNode", "Region", "N:1", "供应链节点位于某个区域。"),
+        rel("servesRegion", "SupplyChainNode", "Region", "N:M", "供应链节点服务一个或多个区域。"),
+        rel("originNode", "TransportationLane", "SupplyChainNode", "N:1", "运输通道起点节点。"),
+        rel("destinationNode", "TransportationLane", "SupplyChainNode", "N:1", "运输通道终点节点。"),
+        rel("transportsProduct", "TransportationLane", "Product", "N:1", "运输通道承运的产品。"),
+        rel("locatedAt", "ProductionLine", "Plant", "N:1", "产线所在工厂。"),
+        rel("followsCalendar", "ProductionLine", "WorkCalendar", "N:1", "产线遵循工作日历。"),
+        rel("containsDailySchedule", "WorkCalendar", "DailyWorkSchedule", "1:N", "工作日历包含日度排程。"),
+        rel("capabilityForProduct", "ProductionCapability", "Product", "N:1", "产能面向的产品。"),
+        rel("capabilityOnLine", "ProductionCapability", "ProductionLine", "N:1", "产能所在产线。"),
+        rel("outputsProduct", "BillOfMaterials", "Product", "N:1", "BOM 输出产品。"),
+        rel("usesLine", "BillOfMaterials", "ProductionLine", "N:1", "BOM 关联产线。"),
+        rel("hasLineItem", "BillOfMaterials", "BOMLineItem", "1:N", "BOM 包含行项目。"),
+        rel("consumesProduct", "BOMLineItem", "Product", "N:1", "BOM 行消耗产品、零件或原材料。"),
+        rel("refersToAlternateGroup", "BOMLineItem", "AlternateMaterialGroup", "N:0..1", "BOM 行引用替代料组。"),
+        rel("demandForProduct", "Demand", "Product", "N:1", "需求对应产品。"),
+        rel("demandAtNode", "Demand", "SupplyChainNode", "N:1", "需求发生节点。"),
+        rel("belongsToPlan", "DemandForecast", "DemandPlan", "N:1", "需求预测属于计划版本。"),
+        rel("takeRateForVehicle", "TakeRateProfile", "Vehicle", "N:1", "选装率对应整车。"),
+        rel("takeRateForConfig", "TakeRateProfile", "ConfigurationOption", "N:1", "选装率对应配置项。"),
+        rel("takeRateLinkedToPlan", "TakeRateProfile", "DemandPlan", "N:1", "选装率链接需求计划。"),
+        rel("supplyOfProduct", "Supply", "Product", "N:1", "供应对应产品。"),
+        rel("supplyAtNode", "Supply", "SupplyChainNode", "N:1", "供应所在节点。"),
+        rel("ownedBy", "Supply", "SupplyChainNode", "N:1", "供应归属节点。"),
+        rel("fulfilledViaLane", "InTransitShipment", "TransportationLane", "N:0..1", "在途供应通过运输通道履约。"),
+        rel("providesProduct", "Supplier", "Product", "N:M", "供应商提供产品。"),
+        rel("capacityDefinedForSupplier", "SupplierCapacity", "Supplier", "N:1", "产能定义到供应商。"),
+        rel("capacityDefinedForProduct", "SupplierCapacity", "Product", "N:1", "产能定义到产品。"),
+        rel("providesCapacity", "Supplier", "SupplierCapacity", "1:N", "供应商提供产能。"),
+        rel("requiresCapacity", "Product", "SupplierCapacity", "1:N", "产品需求占用供应商产能。"),
+        rel("policyForProduct", "PlanningPolicy", "Product", "N:1", "计划策略作用于产品。"),
+        rel("policyAtNode", "PlanningPolicy", "SupplyChainNode", "N:1", "计划策略作用于节点。"),
+        rel("sourcingForLane", "SourcingPolicy", "TransportationLane", "N:1", "寻源策略作用于运输通道。")
+      ]
+    };
+
+    const metricConfig = [
+      ["vehicle_count", "整车 SKU", "产品链"],
+      ["module_count", "核心模块", "产品链"],
+      ["forecast_demand_qty", "预测需求", "需求链"],
+      ["material_need_qty", "物料需求", "制造链"],
+      ["on_hand_qty", "现有库存", "供应链"],
+      ["inbound_qty", "在途数量", "供应链"],
+      ["weekly_capacity_qty", "周产能", "制造链"],
+      ["order_demand_qty", "订单需求", "需求链"]
+    ];
+
+    const $ = selector => document.querySelector(selector);
+    const $$ = selector => [...document.querySelectorAll(selector)];
+    let currentDomain = "all";
+
+    function cls(id, name, domain, parent, properties, desc) {
+      return { id, name, domain, parent, properties, desc };
+    }
+
+    function rel(id, domain, range, cardinality, desc) {
+      return { id, domain, range, cardinality, desc };
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function formatNumber(value) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return value ?? "-";
+      return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 1 }).format(num);
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return date.toLocaleString("zh-CN", { hour12: false });
+    }
+
+    function setHealth(ok, text) {
+      $("#healthDot").classList.toggle("off", !ok);
+      $("#healthText").textContent = text;
+    }
+
+    function showToast(message) {
+      const toast = $("#toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 5200);
+    }
+
+    function successfulRuns() {
+      return state.runs.filter(run => run.status === "SUCCESS");
+    }
+
+    function resetRunData() {
+      state.summary = null;
+      state.tables = [];
+      state.selectedTable = "";
+      state.tablePage = 1;
+      state.tableResult = null;
+      state.demandGap = [];
+      state.capacityGap = [];
+    }
+
+    function renderNoRunState(message = "暂无可查询的成功批次。请先生成新批次，或确认 MySQL 中已有 status = SUCCESS 的 simulation_run。") {
+      resetRunData();
+      renderSummary();
+      renderTables();
+      renderRisks();
+      renderValidation();
+      renderSideInfo();
+      $("#summaryMeta").textContent = message;
+      $("#tableListMeta").textContent = "等待成功批次";
+      $("#tableTitle").textContent = "表数据";
+      $("#tableMeta").textContent = "未选择表";
+      $("#tableRows").innerHTML = `<div class="empty">${escapeHtml(message)}</div>`;
+      $("#tablePager").textContent = "0 条记录";
+      $("#tablePageBadge").textContent = "page 1";
+    }
+
+    async function api(path, options = {}) {
+      const base = state.apiBase.replace(/\/$/, "");
+      const response = await fetch(`${base}${path}`, {
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options
+      });
+      const text = await response.text();
+      let data = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        data = text;
+      }
+      if (!response.ok) {
+        const detail = data && typeof data === "object" && "detail" in data ? data.detail : text;
+        throw new Error(detail || `HTTP ${response.status}`);
+      }
+      return data;
+    }
+
+    function switchPage(pageId) {
+      $$(".page").forEach(page => page.classList.toggle("active", page.id === pageId));
+      $$(".nav-item").forEach(item => item.classList.toggle("active", item.dataset.page === pageId));
+      $(".nav").classList.toggle("sim-open", pageId === "simulation");
+      $("#pageTitle").textContent = pageInfo[pageId][0];
+      $("#pageSubtitle").textContent = pageInfo[pageId][1];
+      if (pageId === "ontology") window.setTimeout(() => renderOntologyGraph(currentDomain), 40);
+      if (pageId === "simulation") switchSimPage(state.activeSimPage);
+    }
+
+    function switchSimPage(pageId) {
+      state.activeSimPage = pageId;
+      $$(".sim-nav-item").forEach(tab => tab.classList.toggle("active", tab.dataset.simPage === pageId));
+      $$(".sim-subpage").forEach(panel => panel.classList.toggle("active", panel.dataset.simPanel === pageId));
+      if ($("#simulation").classList.contains("active")) {
+        $("#pageSubtitle").textContent = simPageInfo[pageId] || pageInfo.simulation[1];
+      }
+    }
+
+    function initStaticOntology() {
+      renderDomainFilters();
+      showClassDetail("Vehicle");
+      window.setTimeout(() => renderOntologyGraph(currentDomain), 40);
+    }
+
+    async function refreshAll() {
+      document.body.classList.add("loading");
+      let healthOk = false;
+      try {
+        await api("/health");
+        healthOk = true;
+        setHealth(true, "后端在线");
+        await loadMapping();
+        await loadRuns();
+        const successRuns = successfulRuns();
+        if (!successRuns.some(run => run.run_id === state.activeRunId)) {
+          const latest = await loadLatestRun();
+          state.activeRunId = latest?.run_id || successRuns[0]?.run_id || "";
+        }
+        renderRuns();
+        renderRunSelect();
+        if (state.activeRunId) {
+          try {
+            await loadRunContext();
+          } catch (error) {
+            showToast(`读取批次数据失败：${error.message}`);
+            renderNoRunState("当前批次不可查询，请选择一个 SUCCESS 批次或重新生成。");
+          }
+        } else {
+          renderNoRunState();
+        }
+      } catch (error) {
+        setHealth(false, healthOk ? "数据库异常" : "连接失败");
+        state.activeRunId = "";
+        renderRuns();
+        renderRunSelect();
+        renderNoRunState(healthOk ? "后端已启动，但批次接口读取失败。请检查 MySQL、DATABASE_URL 和 simulation_run 表。" : "无法连接后端。请先启动 FastAPI 服务。");
+        showToast(`${healthOk ? "读取批次失败" : "无法连接后端"}：${error.message}`);
+      } finally {
+        document.body.classList.remove("loading");
+      }
+    }
+
+    async function loadRuns() {
+      state.runs = await api("/runs");
+      $("#runCount").textContent = `${state.runs.length} 个批次`;
+    }
+
+    async function loadLatestRun() {
+      try {
+        state.latestRun = await api("/runs/latest");
+        return state.latestRun;
+      } catch {
+        state.latestRun = null;
+        return null;
+      }
+    }
+
+    async function loadMapping() {
+      try {
+        state.mapping = await api("/ontology/table-field-mapping");
+      } catch {
+        state.mapping = null;
+      }
+      renderMapping();
+    }
+
+    async function loadRunContext() {
+      const runId = encodeURIComponent(state.activeRunId);
+      const [summary, tables, demandGap, capacityGap] = await Promise.all([
+        api(`/runs/${runId}/summary`),
+        api(`/runs/${runId}/tables`),
+        api(`/runs/${runId}/demand-supply-gap?limit=100`),
+        api(`/runs/${runId}/capacity-gap?limit=100`)
+      ]);
+      state.summary = summary;
+      state.tables = tables;
+      state.demandGap = demandGap;
+      state.capacityGap = capacityGap;
+      if (!state.selectedTable && tables.length) state.selectedTable = tables[0].table_name;
+      renderSummary();
+      renderTables();
+      renderRisks();
+      renderValidation();
+      renderSideInfo();
+      if (state.selectedTable) await loadTableRows(1);
+      setHealth(true, "数据已同步");
+    }
+
+    function renderSideInfo() {
+      $("#sideRun").textContent = state.activeRunId || "未选择";
+      $("#sideTables").textContent = state.tables.length;
+    }
+
+    function renderRunSelect() {
+      const select = $("#runSelect");
+      select.innerHTML = state.runs.length
+        ? state.runs.map(run => `<option value="${escapeHtml(run.run_id)}" ${run.run_id === state.activeRunId ? "selected" : ""} ${run.status !== "SUCCESS" ? "disabled" : ""}>${escapeHtml(run.run_id)}${run.status !== "SUCCESS" ? ` (${escapeHtml(run.status)})` : ""}</option>`).join("")
+        : `<option value="">暂无批次</option>`;
+    }
+
+    function renderRuns() {
+      const host = $("#runList");
+      if (!state.runs.length) {
+        host.innerHTML = `<div class="empty">暂无批次。</div>`;
+        return;
+      }
+      host.innerHTML = state.runs.map(run => `
+        <button class="list-btn ${run.run_id === state.activeRunId ? "active" : ""}" data-run="${escapeHtml(run.run_id)}" ${run.status !== "SUCCESS" ? "disabled" : ""}>
+          <span>
+            <strong>${escapeHtml(run.run_name || run.run_id)}</strong>
+            <small>${escapeHtml(run.run_id)} · ${formatDate(run.generated_at)} · seed ${escapeHtml(run.seed ?? "-")}</small>
+          </span>
+          <em class="badge ${run.status === "SUCCESS" ? "green" : "red"}">${escapeHtml(run.status)}</em>
+        </button>
+      `).join("");
+      host.querySelectorAll("[data-run]").forEach(button => {
+        button.addEventListener("click", () => selectRun(button.dataset.run));
+      });
+    }
+
+    async function selectRun(runId) {
+      if (!runId || runId === state.activeRunId) return;
+      const run = state.runs.find(item => item.run_id === runId);
+      if (run && run.status !== "SUCCESS") {
+        showToast("只能查询 status = SUCCESS 的批次。");
+        return;
+      }
+      state.activeRunId = runId;
+      state.selectedTable = "";
+      state.tablePage = 1;
+      renderRuns();
+      renderRunSelect();
+      await loadRunContext();
+    }
+
+    function renderSummary() {
+      const summary = state.summary || {};
+      $("#metrics").innerHTML = metricConfig.slice(0, 4).map(([key, label, group]) => `
+        <div class="metric-card">
+          <span>${label}</span>
+          <strong>${formatNumber(summary[key] || 0)}</strong>
+          <small>${group}</small>
+        </div>
+      `).join("");
+
+      $("#summaryMeta").textContent = summary.run_id ? `run_id ${summary.run_id}` : "等待数据";
+      $("#currentRunId").textContent = state.activeRunId || "未选择";
+      $("#currentTableCount").textContent = state.tables.length;
+      const activeRun = state.runs.find(run => run.run_id === state.activeRunId) || state.latestRun || {};
+      $("#currentOutputDir").textContent = activeRun.output_dir || "-";
+      const rows = metricConfig.map(([key, label]) => ({ key, label, value: Number(summary[key] || 0) }));
+      const max = Math.max(...rows.map(row => row.value), 1);
+      $("#summaryBars").innerHTML = rows.map(row => `
+        <div class="bar-row">
+          <span>${label}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.max(3, row.value / max * 100)}%"></div></div>
+          <strong>${formatNumber(row.value)}</strong>
+        </div>
+      `).join("");
+    }
+
+    async function generateRun() {
+      const manualRunName = $("#runName").value.trim();
+      const scenarioName = $("#scenarioName").value;
+      const simulationDate = $("#simulationDate").value;
+      const seedText = $("#seed").value.trim();
+      const payload = {
+        run_name: manualRunName || `${scenarioName}${simulationDate ? `_${simulationDate}` : ""}`,
+        seed: seedText ? Number(seedText) : null
+      };
+      if (payload.seed !== null && !Number.isInteger(payload.seed)) {
+        showToast("seed 必须是整数。");
+        return;
+      }
+      $("#generateState").textContent = "生成中";
+      $("#generateBtn").disabled = true;
+      try {
+        const result = await api("/runs/generate", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        state.activeRunId = result.run_id;
+        state.selectedTable = "";
+        state.selectedClass = "";
+        await refreshAll();
+        switchSimPage("overview");
+        showToast(`批次生成成功：${result.run_id}`);
+      } catch (error) {
+        showToast(`生成失败：${error.message}`);
+      } finally {
+        $("#generateState").textContent = "就绪";
+        $("#generateBtn").disabled = false;
+      }
+    }
+
+    function renderTables() {
+      const keyword = $("#tableSearch").value.trim().toLowerCase();
+      const tables = state.tables.filter(item => item.table_name.toLowerCase().includes(keyword));
+      $("#tableListMeta").textContent = `${tables.length} / ${state.tables.length} 张表`;
+      $("#tableList").innerHTML = tables.length
+        ? tables.map(item => `
+          <button class="list-btn ${item.table_name === state.selectedTable ? "active" : ""}" data-table="${escapeHtml(item.table_name)}">
+            <span>
+              <strong>${escapeHtml(item.table_name)}</strong>
+              <small>${formatNumber(item.row_count)} rows</small>
+            </span>
+            <em class="badge">${formatNumber(item.row_count)}</em>
+          </button>
+        `).join("")
+        : `<div class="empty">没有匹配的数据表。</div>`;
+      $("#tableList").querySelectorAll("[data-table]").forEach(button => {
+        button.addEventListener("click", () => {
+          state.selectedTable = button.dataset.table;
+          loadTableRows(1);
+          renderTables();
+        });
+      });
+    }
+
+    async function loadTableRows(page) {
+      if (!state.activeRunId || !state.selectedTable) return;
+      state.tablePage = Math.max(1, page);
+      const runId = encodeURIComponent(state.activeRunId);
+      const table = encodeURIComponent(state.selectedTable);
+      try {
+        state.tableResult = await api(`/runs/${runId}/tables/${table}?page=${state.tablePage}&page_size=50`);
+        renderTableRows();
+      } catch (error) {
+        showToast(`读取表失败：${error.message}`);
+      }
+    }
+
+    function renderTableRows() {
+      const result = state.tableResult;
+      $("#tableTitle").textContent = state.selectedTable || "表数据";
+      if (!result || !result.rows.length) {
+        $("#tableRows").innerHTML = `<div class="empty">当前页暂无记录。</div>`;
+        $("#tableMeta").textContent = "0 条";
+        $("#tablePager").textContent = "0 条记录";
+        $("#tablePageBadge").textContent = `page ${state.tablePage}`;
+        return;
+      }
+      $("#tableMeta").textContent = `${formatNumber(result.total)} 条`;
+      $("#tablePageBadge").textContent = `page ${result.page}`;
+      $("#tablePager").textContent = `第 ${result.page} 页 · 每页 ${result.page_size} 条 · 共 ${formatNumber(result.total)} 条`;
+      $("#tableRows").innerHTML = makeTable(result.rows, null, row => {
+        const firstKey = Object.keys(row)[1] || Object.keys(row)[0];
+        return String(row[firstKey] ?? "");
+      });
+    }
+
+    function makeTable(rows, columns = null, rowIdGetter = null) {
+      if (!rows || !rows.length) return `<div class="empty">暂无数据。</div>`;
+      const keys = columns || Object.keys(rows[0]);
+      return `
+        <table>
+          <thead><tr>${keys.map(key => `<th>${escapeHtml(key)}</th>`).join("")}</tr></thead>
+          <tbody>
+            ${rows.map((row, index) => `
+              <tr data-row-index="${index}" ${rowIdGetter ? `title="${escapeHtml(rowIdGetter(row))}"` : ""}>
+                ${keys.map(key => `<td>${escapeHtml(row[key])}</td>`).join("")}
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderRisks() {
+      const highDemand = state.demandGap.filter(item => item.risk_level === "HIGH");
+      const highCapacity = state.capacityGap.filter(item => item.risk_level === "HIGH");
+      $("#demandRiskCount").textContent = highDemand.length;
+      $("#capacityRiskCount").textContent = highCapacity.length;
+      $("#demandRiskTop").textContent = highDemand[0]
+        ? `${highDemand[0].module_id} 缺口 ${formatNumber(highDemand[0].gap_qty)}`
+        : "暂无高风险记录";
+      $("#capacityRiskTop").textContent = highCapacity[0]
+        ? `${highCapacity[0].vehicle_id} 缺口 ${formatNumber(highCapacity[0].gap_qty)}`
+        : "暂无高风险记录";
+
+      $("#demandGapMeta").textContent = `${state.demandGap.length} 条`;
+      $("#capacityGapMeta").textContent = `${state.capacityGap.length} 条`;
+      $("#demandGapTable").innerHTML = makeTable(state.demandGap, ["module_id", "week_start", "need_qty", "inventory_qty", "inbound_qty", "gap_qty", "risk_level"]);
+      $("#capacityGapTable").innerHTML = makeTable(state.capacityGap, ["vehicle_id", "plant_node_id", "week_start", "demand_qty", "capacity_qty", "gap_qty", "risk_level"]);
+    }
+
+    function renderValidation() {
+      const totalRows = state.tables.reduce((sum, item) => sum + Number(item.row_count || 0), 0);
+      const summary = state.summary || {};
+      const checks = [
+        ["主键批次", Boolean(state.activeRunId), state.activeRunId || "等待 run_id"],
+        ["生成表清单", state.tables.length >= 30, `${state.tables.length} 张表`],
+        ["核心数据规模", Number(summary.vehicle_count || 0) > 0 && Number(summary.module_count || 0) > 0, `整车 ${formatNumber(summary.vehicle_count || 0)} / 模块 ${formatNumber(summary.module_count || 0)}`],
+        ["需求与库存数值", Number(summary.forecast_demand_qty || 0) >= 0 && Number(summary.on_hand_qty || 0) >= 0, "非负数量校验"],
+        ["字段本体映射", Boolean(state.mapping?.mappings?.length), `${state.mapping?.mappings?.length || 0} 张映射表`],
+        ["供需缺口分析", Array.isArray(state.demandGap), `${state.demandGap.length} 条记录`],
+        ["产能缺口分析", Array.isArray(state.capacityGap), `${state.capacityGap.length} 条记录`],
+        ["MySQL 记录量", totalRows > 0, `${formatNumber(totalRows)} 行`]
+      ];
+      $("#validationMeta").textContent = `${checks.filter(item => item[1]).length} / ${checks.length} 通过`;
+      $("#validationList").innerHTML = checks.map(([label, ok, detail]) => `
+        <div class="check-row ${ok ? "pass" : ""}">
+          <i></i>
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(detail)}</strong>
+        </div>
+      `).join("");
+    }
+
+    function renderMapping() {
+      const mappings = state.mapping?.mappings || [];
+      if (!mappings.length) {
+        $("#mappingMeta").textContent = "暂无映射";
+        $("#mappingTable").innerHTML = `<div class="empty">等待后端返回字段与本体映射。</div>`;
+        return;
+      }
+      const rows = mappings.flatMap(item => item.fields.map(field => ({
+        "数据表": item.table_name,
+        "字段": field.field_name,
+        "对应本体对象": field.ontology_target,
+        "映射类型": field.mapping_type
+      }))).slice(0, 120);
+      $("#mappingMeta").textContent = `${mappings.length} 张表 / ${rows.length} 个字段`;
+      $("#mappingTable").innerHTML = makeTable(rows, ["数据表", "字段", "对应本体对象", "映射类型"]);
+      renderValidation();
+    }
+
+    function renderDomainFilters() {
+      const host = $("#domainList");
+      host.innerHTML = ontologyData.domains.map(domain => `
+        <button class="domain-btn ${domain.id === currentDomain ? "active" : ""}" style="--domain-color:${domain.color}" data-domain="${escapeHtml(domain.id)}">
+          <span><i></i> ${escapeHtml(domain.name)}</span>
+          <small>${escapeHtml(domain.en)}</small>
+        </button>
+      `).join("");
+      host.querySelectorAll("[data-domain]").forEach(button => {
+        button.addEventListener("click", () => renderOntologyGraph(button.dataset.domain));
+      });
+    }
+
+    function renderOntologyGraph(domainFilter = "all") {
+      currentDomain = domainFilter;
+      renderDomainFilters();
+      const domain = ontologyData.domains.find(item => item.id === domainFilter);
+      $("#graphSummary").textContent = domainFilter === "all" ? "完整本体" : `${domain.name}筛选`;
+
+      const svg = d3.select("#ontologyGraph");
+      svg.selectAll("*").remove();
+      const container = svg.node().parentElement;
+      const width = Math.max(container.clientWidth, 720);
+      const height = Math.max(container.clientHeight, 520);
+      svg.attr("viewBox", [0, 0, width, height]);
+
+      svg.append("defs").append("marker")
+        .attr("id", "arrow")
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 21)
+        .attr("refY", 0)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5")
+        .attr("fill", "rgba(155, 168, 184, 0.72)");
+
+      const classSet = new Set();
+      ontologyData.classes.forEach(item => {
+        if (domainFilter === "all" || item.domain === domainFilter) classSet.add(item.id);
+      });
+      ontologyData.relations.forEach(item => {
+        if (domainFilter === "all" || classSet.has(item.domain) || classSet.has(item.range)) {
+          classSet.add(item.domain);
+          classSet.add(item.range);
+        }
+      });
+
+      const nodes = ontologyData.classes
+        .filter(item => classSet.has(item.id))
+        .map(item => ({ ...item }));
+
+      const links = [
+        ...ontologyData.classes
+          .filter(item => item.parent && classSet.has(item.id) && classSet.has(item.parent))
+          .map(item => ({ source: item.id, target: item.parent, label: "subClassOf", kind: "inherit" })),
+        ...ontologyData.relations
+          .filter(item => classSet.has(item.domain) && classSet.has(item.range))
+          .map(item => ({ source: item.domain, target: item.range, label: item.id, kind: "object" }))
+      ];
+
+      const zoomLayer = svg.append("g");
+      svg.call(d3.zoom().scaleExtent([0.35, 2.8]).on("zoom", event => zoomLayer.attr("transform", event.transform)));
+
+      const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(d => d.kind === "inherit" ? 95 : 145).strength(0.55))
+        .force("charge", d3.forceManyBody().strength(-620))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide().radius(54));
+
+      const link = zoomLayer.append("g")
+        .selectAll("line")
+        .data(links)
+        .join("line")
+        .attr("class", d => `link ${d.kind}`);
+
+      const label = zoomLayer.append("g")
+        .selectAll("text")
+        .data(links)
+        .join("text")
+        .attr("class", "link-label")
+        .text(d => d.label);
+
+      const node = zoomLayer.append("g")
+        .selectAll("g")
+        .data(nodes)
+        .join("g")
+        .attr("class", "node")
+        .call(d3.drag()
+          .on("start", dragStarted)
+          .on("drag", dragged)
+          .on("end", dragEnded))
+        .on("click", (event, d) => showClassDetail(d.id));
+
+      node.append("circle")
+        .attr("r", d => d.parent ? 22 : 27)
+        .attr("fill", d => ontologyDomainColors[d.domain]);
+
+      node.append("title").text(d => `${d.id}（${d.name}）`);
+      node.append("text").attr("dy", 4).text(d => d.id.length > 18 ? `${d.id.slice(0, 17)}...` : d.id);
+      node.append("text").attr("dy", 38).attr("fill", "var(--muted)").text(d => d.name);
+
+      simulation.on("tick", () => {
+        link
+          .attr("x1", d => d.source.x)
+          .attr("y1", d => d.source.y)
+          .attr("x2", d => d.target.x)
+          .attr("y2", d => d.target.y);
+        label
+          .attr("x", d => (d.source.x + d.target.x) / 2)
+          .attr("y", d => (d.source.y + d.target.y) / 2);
+        node.attr("transform", d => `translate(${d.x},${d.y})`);
+      });
+
+      function dragStarted(event) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
+      }
+
+      function dragged(event) {
+        event.subject.fx = event.x;
+        event.subject.fy = event.y;
+      }
+
+      function dragEnded(event) {
+        if (!event.active) simulation.alphaTarget(0);
+        event.subject.fx = null;
+        event.subject.fy = null;
+      }
+
+      const defaultId = nodes.find(item => item.id === "Vehicle")?.id || nodes[0]?.id;
+      if (defaultId) showClassDetail(defaultId);
+    }
+
+    function showClassDetail(classId) {
+      const item = ontologyData.classes.find(clsItem => clsItem.id === classId);
+      const host = $("#classDetail");
+      if (!item) {
+        host.innerHTML = `<div class="empty">请选择一个本体类节点查看详情。</div>`;
+        return;
+      }
+      const domain = ontologyData.domains.find(domainItem => domainItem.id === item.domain);
+      const relatedRelations = ontologyData.relations.filter(relation => relation.domain === item.id || relation.range === item.id);
+      const children = ontologyData.classes.filter(clsItem => clsItem.parent === item.id);
+      host.innerHTML = `
+        <div class="detail-title">
+          <h3 style="color:${ontologyDomainColors[item.domain]}">${escapeHtml(item.id)}</h3>
+          <p>${escapeHtml(item.name)} · ${escapeHtml(domain.name)} / ${escapeHtml(domain.en)}</p>
+        </div>
+        <div class="detail-block">
+          <h4>基础信息</h4>
+          <div class="kv-list">
+            <div class="kv"><span>类名</span><strong>${escapeHtml(item.id)}</strong></div>
+            <div class="kv"><span>中文名</span><strong>${escapeHtml(item.name)}</strong></div>
+            <div class="kv"><span>所属领域</span><strong>${escapeHtml(domain.name)}</strong></div>
+            <div class="kv"><span>父类</span><strong>${escapeHtml(item.parent || "无")}</strong></div>
+          </div>
+        </div>
+        <div class="detail-block">
+          <h4>属性列表</h4>
+          <div class="tag-list">${item.properties.map(prop => `<span class="tag">${escapeHtml(prop)}</span>`).join("")}</div>
+        </div>
+        <div class="detail-block">
+          <h4>相关关系</h4>
+          <div class="kv-list">
+            ${relatedRelations.map(relation => `<div class="kv"><span>${escapeHtml(relation.id)}</span><strong>${escapeHtml(relation.domain)} → ${escapeHtml(relation.range)} · ${escapeHtml(relation.cardinality)}</strong></div>`).join("") || `<div class="kv"><span>对象关系</span><strong>暂无直接对象关系</strong></div>`}
+            ${children.map(child => `<div class="kv"><span>subClassOf</span><strong>${escapeHtml(child.id)} → ${escapeHtml(item.id)}</strong></div>`).join("")}
+          </div>
+        </div>
+        <div class="detail-block">
+          <h4>业务说明</h4>
+          <p>${escapeHtml(item.desc)}</p>
+        </div>
+      `;
+    }
+
+    function bindEvents() {
+      $$(".nav-item").forEach(item => item.addEventListener("click", () => switchPage(item.dataset.page)));
+      $("#apiBase").value = state.apiBase;
+      $("#simulationDate").valueAsDate = new Date();
+      $("#apiBase").addEventListener("change", () => {
+        state.apiBase = $("#apiBase").value.trim() || DEFAULT_API_BASE;
+        localStorage.setItem("threeChainApiBase", state.apiBase);
+        refreshAll();
+      });
+      $("#refreshBtn").addEventListener("click", refreshAll);
+      $("#generateBtn").addEventListener("click", generateRun);
+      $$(".sim-nav-item").forEach(item => item.addEventListener("click", () => {
+        switchPage("simulation");
+        switchSimPage(item.dataset.simPage);
+      }));
+      $("#runSelect").addEventListener("change", event => selectRun(event.target.value));
+      $("#tableSearch").addEventListener("input", renderTables);
+      $("#prevTablePage").addEventListener("click", () => loadTableRows(state.tablePage - 1));
+      $("#nextTablePage").addEventListener("click", () => {
+        const result = state.tableResult;
+        if (result && result.page * result.page_size >= result.total) return;
+        loadTableRows(state.tablePage + 1);
+      });
+      window.addEventListener("resize", () => renderOntologyGraph(currentDomain));
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initStaticOntology();
+      bindEvents();
+      refreshAll();
+    });
+  </script>
+</body>
+</html>
